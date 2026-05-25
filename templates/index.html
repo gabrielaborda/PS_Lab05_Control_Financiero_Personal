@@ -25,9 +25,9 @@
                         Registrar movimiento
                     </button>
 
-                    <button class="btn btn-secondary" disabled>
+                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary">
                         Ver dashboard
-                    </button>
+                    </a>
                 </div>
 
                 <p class="text-muted mt-3 mb-0">
@@ -60,6 +60,7 @@
                     <li>Base de datos SQLite</li>
                     <li>Modelos principales del sistema</li>
                     <li>Estructura visual responsive</li>
+                    <li>Dashboard y reportes financieros</li> 
                 </ul>
             </div>
         </div>
@@ -111,6 +112,25 @@
                 <span class="status-badge">Próximamente</span>
             </div>
         </div>
+
+        <!-- módulo dashboard con enlace activo -->
+        <div class="col-md-3 mb-3">
+            <div class="card module-card" style="border-left-color: var(--color-primary);">
+                <div class="module-icon dashboard">%</div>
+                <h5>Dashboard</h5>
+                <p class="text-muted mb-2">
+                    Visualización de gráficos y resumen financiero.
+                </p>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary btn-sm">
+                        Abrir dashboard
+                    </a>
+                {% else %}
+                    <span class="status-badge" style="color:var(--color-accent);border-color:var(--color-accent);">Disponible</span>
+                {% endif %}
+            </div>
+        </div>
+
     </div>
 </section>
 
