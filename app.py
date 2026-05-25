@@ -29,6 +29,24 @@ def create_app():
     def home():
         return render_template("index.html")
 
+    @app.route("/health")
+    def health():
+        return {
+            "status": "ok",
+            "message": "Aplicación funcionando correctamente"
+        }
+
+    @app.errorhandler(404)
+    def pagina_no_encontrada(error):
+        return render_template("error/404.html"), 404
+
+    @app.errorhandler(500)
+    def error_interno(error):
+        return render_template("error/500.html"), 500
+
+    with app.app_context():
+        db.create_all()
+        
     with app.app_context():
         db.create_all()
 

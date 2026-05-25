@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>500 | Error interno</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- CSS principal del sistema -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=500-glitch-1">
+</head>
+<body class="error-page-body">
+
+<section class="error-page">
+    <div class="error-content">
+        <p class="error-label">ERROR!</p>
+
+        <h1 class="error-code error-500" data-text="500">500</h1>
+
+        <h2 class="error-title">SERVER ERROR</h2>
+
+        <p class="error-description">
+            Ocurrió un problema interno en el servidor. Revisa la terminal para ver más detalles.
+        </p>
+
+        <a href="{{ url_for('home') }}" class="error-button">
+            Volver al inicio
+        </a>
+    </div>
+</section>
+
+</body>
+</html>

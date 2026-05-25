@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>404 | Página no encontrada</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- CSS principal del sistema -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=404-glitch-1">
+</head>
+<body class="error-page-body">
+
+<section class="error-page">
+    <div class="error-content">
+        <p class="error-label">ERROR!</p>
+
+        <h1 class="error-code" data-text="404">404</h1>
+
+        <h2 class="error-title">PAGE NOT FOUND</h2>
+
+        <p class="error-description">
+            La página que buscas no existe o todavía no fue implementada dentro del sistema.
+        </p>
+
+        <a href="{{ url_for('home') }}" class="error-button">
+            Volver al inicio
+        </a>
+    </div>
+</section>
+
+</body>
+</html>

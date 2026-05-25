@@ -1,69 +1,117 @@
 {% extends "base.html" %}
 
+{% block title %}Inicio | Control Financiero Personal{% endblock %}
+
 {% block content %}
 
-<section class="content-card">
-    <h1 class="mb-3">Control Financiero Personal</h1>
+<section class="hero-card">
+    <div class="row align-items-center">
+        <div class="col-lg-7">
+            <span class="hero-badge">PMV financiero</span>
 
-    {% if current_user.is_authenticated %}
-        <p class="text-muted">
-            Bienvenido al sistema. Desde esta base se integrarán los módulos de ingresos,
-            gastos, categorías, presupuestos, dashboard y reportes.
-        </p>
+            <h1 class="mt-3 mb-3">
+                Control Financiero Personal
+            </h1>
 
-        <div class="row mt-4">
-            <div class="col-md-3 mb-3">
-                <div class="card module-card">
-                    <h5>Ingresos y gastos</h5>
-                    <p class="text-muted mb-0">
-                        Registro y consulta de movimientos financieros personales.
-                    </p>
+            {% if current_user.is_authenticated %}
+                <p class="hero-text">
+                    Bienvenido al sistema. Esta base permite integrar los módulos de ingresos,
+                    gastos, categorías, presupuestos y dashboard, manteniendo la información
+                    asociada a cada usuario.
+                </p>
+
+                <div class="d-flex flex-wrap gap-2 mt-4">
+                    <button class="btn btn-primary" disabled>
+                        Registrar movimiento
+                    </button>
+
+                    <button class="btn btn-secondary" disabled>
+                        Ver dashboard
+                    </button>
                 </div>
-            </div>
 
-            <div class="col-md-3 mb-3">
-                <div class="card module-card">
-                    <h5>Categorías</h5>
-                    <p class="text-muted mb-0">
-                        Organización de ingresos y gastos según su tipo.
-                    </p>
-                </div>
-            </div>
+                <p class="text-muted mt-3 mb-0">
+                    Los módulos funcionales serán integrados por el equipo en las siguientes ramas.
+                </p>
+            {% else %}
+                <p class="hero-text">
+                    Gestiona tus ingresos, gastos, categorías y presupuestos mensuales desde
+                    una aplicación web sencilla, clara y enfocada en el control financiero personal.
+                </p>
 
-            <div class="col-md-3 mb-3">
-                <div class="card module-card">
-                    <h5>Presupuestos</h5>
-                    <p class="text-muted mb-0">
-                        Definición de límites mensuales para controlar gastos.
-                    </p>
-                </div>
-            </div>
+                <div class="d-flex flex-wrap gap-2 mt-4">
+                    <a href="{{ url_for('auth.registro') }}" class="btn btn-primary">
+                        Crear cuenta
+                    </a>
 
-            <div class="col-md-3 mb-3">
-                <div class="card module-card">
-                    <h5>Dashboard</h5>
-                    <p class="text-muted mb-0">
-                        Visualización de gráficos y resumen financiero.
-                    </p>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">
+                        Iniciar sesión
+                    </a>
                 </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-5 mt-4 mt-lg-0">
+            <div class="summary-panel">
+                <h5>Base implementada</h5>
+
+                <ul class="feature-list">
+                    <li>Autenticación de usuarios</li>
+                    <li>Base de datos SQLite</li>
+                    <li>Modelos principales del sistema</li>
+                    <li>Estructura visual responsive</li>
+                </ul>
             </div>
         </div>
-    {% else %}
-        <p class="text-muted">
-            Esta aplicación permite registrar ingresos, gastos, categorías y presupuestos
-            para llevar un mejor control de las finanzas personales.
-        </p>
+    </div>
+</section>
 
-        <div class="mt-3">
-            <a href="{{ url_for('auth.registro') }}" class="btn btn-primary me-2">
-                Crear cuenta
-            </a>
-
-            <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">
-                Iniciar sesión
-            </a>
+<section class="mt-4">
+    <div class="row">
+        <div class="col-md-3 mb-3">
+            <div class="card module-card">
+                <div class="module-icon ingreso">+</div>
+                <h5>Ingresos y gastos</h5>
+                <p class="text-muted mb-2">
+                    Registro y consulta de movimientos financieros personales.
+                </p>
+                <span class="status-badge">Próximamente</span>
+            </div>
         </div>
-    {% endif %}
+
+        <div class="col-md-3 mb-3">
+            <div class="card module-card">
+                <div class="module-icon categoria">#</div>
+                <h5>Categorías</h5>
+                <p class="text-muted mb-2">
+                    Organización de ingresos y gastos según su tipo.
+                </p>
+                <span class="status-badge">Próximamente</span>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card module-card">
+                <div class="module-icon alerta">!</div>
+                <h5>Presupuestos</h5>
+                <p class="text-muted mb-2">
+                    Definición de límites mensuales y alertas de gasto.
+                </p>
+                <span class="status-badge">Próximamente</span>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card module-card">
+                <div class="module-icon dashboard">%</div>
+                <h5>Dashboard</h5>
+                <p class="text-muted mb-2">
+                    Visualización de gráficos y resumen financiero.
+                </p>
+                <span class="status-badge">Próximamente</span>
+            </div>
+        </div>
+    </div>
 </section>
 
 {% endblock %}
