@@ -3,10 +3,10 @@
 Sistema web que permite a usuarios registrarse, iniciar sesión y gestionar sus finanzas personales: registrar ingresos y gastos, organizarlos por categorías, definir presupuestos mensuales con alertas, y visualizar un dashboard con gráficos de resumen.
 
 ## Integrantes
-- [ ]
-- [ ]
-- [ ]
-- [ ]
+- Betanzos Rosas Taylor Anthony
+- Borda Espinoza Gabriela Nayely
+- Condori León Joel Isaias
+- Perez Huamani Jeremy Joshua
 
 ## Instrucciones de Instalación
 
