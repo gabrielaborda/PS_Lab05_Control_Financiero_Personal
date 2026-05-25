@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Control Financiero Personal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- CSS propio -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg app-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="{{ url_for('home') }}">
+            Finanzas App
+        </a>
+
+        <div class="navbar-actions ms-auto">
+            {% if current_user.is_authenticated %}
+                <span class="nav-user me-3">
+                    Hola, {{ current_user.nombre }}
+                </span>
+
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-secondary btn-sm">
+                    Cerrar sesión
+                </a>
+            {% else %}
+                <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm me-2">
+                    Iniciar sesión
+                </a>
+
+                <a href="{{ url_for('auth.registro') }}" class="btn btn-warning btn-sm">
+                    Registrarse
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<main class="container page-wrapper">
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
