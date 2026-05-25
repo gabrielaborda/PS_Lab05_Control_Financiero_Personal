@@ -1,11 +1,11 @@
 from flask import Blueprint, render_template, request, jsonify, send_file
 from flask_login import login_required, current_user
-from models import db, Transaccion, Categoria
+from models import db, Transaccion, Categoria, Presupuesto
 from datetime import datetime, date, timedelta
 from decimal import Decimal, InvalidOperation
 import csv
 import io
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, func, extract
 
 transacciones_bp = Blueprint("transacciones", __name__, url_prefix="/transacciones")
 
@@ -69,6 +69,67 @@ def validar_categoria(categoria_id, usuario_id):
         return False, "La categoría no existe"
     
     return True, categoria
+
+
+def _to_float(valor):
+    """Convierte montos Decimal / None a float para respuestas JSON."""
+    return float(valor) if valor is not None else 0.0
+
+
+def verificar_presupuesto_categoria(usuario_id, categoria_id, monto, fecha, tipo, transaccion_ignorar_id=None):
+    """
+    Verifica si un gasto supera el presupuesto de su categoría en el mes seleccionado.
+    Retorna un diccionario con la alerta si se supera el límite; si no, retorna None.
+    """
+    if tipo != "gasto":
+        return None
+
+    presupuesto = Presupuesto.query.filter_by(
+        usuario_id=usuario_id,
+        categoria_id=categoria_id,
+        mes=fecha.month,
+        anio=fecha.year
+    ).first()
+
+    if not presupuesto:
+        return None
+
+    query_gastado = db.session.query(func.sum(Transaccion.monto)).filter(
+        Transaccion.usuario_id == usuario_id,
+        Transaccion.categoria_id == categoria_id,
+        Transaccion.tipo == "gasto",
+        extract("month", Transaccion.fecha) == fecha.month,
+        extract("year", Transaccion.fecha) == fecha.year
+    )
+
+    if transaccion_ignorar_id:
+        query_gastado = query_gastado.filter(Transaccion.id != transaccion_ignorar_id)
+
+    gastado_actual = _to_float(query_gastado.scalar())
+    monto_nuevo = _to_float(monto)
+    limite = _to_float(presupuesto.monto_limite)
+    nuevo_total = gastado_actual + monto_nuevo
+
+    if limite > 0 and nuevo_total > limite:
+        categoria = presupuesto.categoria
+        nombre_categoria = categoria.nombre if categoria else "esta categoría"
+        return {
+            "categoria": nombre_categoria,
+            "icono": categoria.icono if categoria else "⚠️",
+            "limite": round(limite, 2),
+            "gastado_actual": round(gastado_actual, 2),
+            "monto_nuevo": round(monto_nuevo, 2),
+            "nuevo_total": round(nuevo_total, 2),
+            "exceso": round(nuevo_total - limite, 2),
+            "porcentaje": round((nuevo_total / limite) * 100, 1),
+            "mensaje": (
+                f"Este gasto superará el presupuesto mensual de {nombre_categoria}. "
+                f"Nuevo total: S/ {nuevo_total:.2f} de S/ {limite:.2f}. "
+                f"Exceso: S/ {nuevo_total - limite:.2f}."
+            )
+        }
+
+    return None
 
 
 # ==================== RUTAS DE TRANSACCIONES ====================
@@ -184,6 +245,26 @@ def crear_transaccion():
             es_valido, resultado = validar_categoria(categoria_id, current_user.id)
             if not es_valido:
                 return jsonify({"error": resultado}), 400
+
+            categoria = resultado
+            if categoria.tipo != tipo:
+                return jsonify({"error": "La categoría seleccionada no coincide con el tipo de transacción"}), 400
+
+            confirmar_exceso = request.form.get("confirmar_exceso") == "1"
+            alerta_presupuesto = verificar_presupuesto_categoria(
+                current_user.id,
+                int(categoria_id),
+                monto,
+                fecha,
+                tipo
+            )
+
+            if alerta_presupuesto and not confirmar_exceso:
+                return jsonify({
+                    "requiere_confirmacion": True,
+                    "mensaje": alerta_presupuesto["mensaje"],
+                    "alerta": alerta_presupuesto
+                }), 409
             
             # Crear transacción
             nueva_transaccion = Transaccion(
@@ -200,7 +281,8 @@ def crear_transaccion():
             
             return jsonify({
                 "exito": True,
-                "mensaje": "Transacción registrada exitosamente"
+                "mensaje": "Transacción registrada exitosamente",
+                "alerta_presupuesto": alerta_presupuesto
             }), 201
             
         except Exception as e:
@@ -253,6 +335,27 @@ def editar_transaccion(id):
             es_valido, resultado = validar_categoria(categoria_id, current_user.id)
             if not es_valido:
                 return jsonify({"error": resultado}), 400
+
+            categoria = resultado
+            if categoria.tipo != tipo:
+                return jsonify({"error": "La categoría seleccionada no coincide con el tipo de transacción"}), 400
+
+            confirmar_exceso = request.form.get("confirmar_exceso") == "1"
+            alerta_presupuesto = verificar_presupuesto_categoria(
+                current_user.id,
+                int(categoria_id),
+                monto,
+                fecha,
+                tipo,
+                transaccion_ignorar_id=transaccion.id
+            )
+
+            if alerta_presupuesto and not confirmar_exceso:
+                return jsonify({
+                    "requiere_confirmacion": True,
+                    "mensaje": alerta_presupuesto["mensaje"],
+                    "alerta": alerta_presupuesto
+                }), 409
             
             # Actualizar transacción
             transaccion.descripcion = descripcion
@@ -265,7 +368,8 @@ def editar_transaccion(id):
             
             return jsonify({
                 "exito": True,
-                "mensaje": "Transacción actualizada exitosamente"
+                "mensaje": "Transacción actualizada exitosamente",
+                "alerta_presupuesto": alerta_presupuesto
             }), 200
             
         except Exception as e:

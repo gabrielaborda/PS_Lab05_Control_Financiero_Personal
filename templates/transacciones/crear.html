@@ -127,6 +127,11 @@
                             <span id="textoExito"></span>
                         </div>
 
+                        <!-- Notificación de presupuesto -->
+                        <div id="mensajeAdvertencia" class="alert alert-warning d-none" role="alert">
+                            <span id="textoAdvertencia"></span>
+                        </div>
+
                         <!-- Botones -->
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-success flex-grow-1">
@@ -158,6 +163,26 @@
     </div>
 </div>
 
+<!-- Modal de confirmación por exceso de presupuesto -->
+<div class="modal fade" id="modalConfirmarPresupuesto" tabindex="-1" aria-labelledby="modalConfirmarPresupuestoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="modalConfirmarPresupuestoLabel">⚠️ Presupuesto excedido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p id="textoConfirmacionPresupuesto" class="mb-2"></p>
+                <p class="mb-0 fw-semibold">¿Está seguro de hacer el gasto en esa categoría?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" id="btnConfirmarPresupuesto">Sí, registrar gasto</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Establece la fecha actual por defecto
 document.getElementById('fecha').valueAsDate = new Date();
@@ -170,14 +195,25 @@ const mensajeError = document.getElementById('mensajeError');
 const textoError = document.getElementById('textoError');
 const mensajeExito = document.getElementById('mensajeExito');
 const textoExito = document.getElementById('textoExito');
+const mensajeAdvertencia = document.getElementById('mensajeAdvertencia');
+const textoAdvertencia = document.getElementById('textoAdvertencia');
+let modalConfirmarPresupuesto = null;
+const textoConfirmacionPresupuesto = document.getElementById('textoConfirmacionPresupuesto');
+const btnConfirmarPresupuesto = document.getElementById('btnConfirmarPresupuesto');
+
+function limpiarMensajes() {
+    mensajeError.classList.add('d-none');
+    mensajeExito.classList.add('d-none');
+    mensajeAdvertencia.classList.add('d-none');
+}
 
 function actualizarCategoriasDisponibles() {
     const tipoSeleccionado = document.getElementById('tipo').value;
     const categoriaSelect = document.getElementById('categoria_id');
-    
+
     // Limpiar selección
     categoriaSelect.value = '';
-    
+
     // Filtrar y mostrar solo categorías del tipo seleccionado
     const opciones = categoriaSelect.querySelectorAll('option');
     opciones.forEach(opcion => {
@@ -190,6 +226,26 @@ function actualizarCategoriasDisponibles() {
     });
 }
 
+function obtenerModalConfirmacion() {
+    if (!modalConfirmarPresupuesto) {
+        modalConfirmarPresupuesto = new bootstrap.Modal(document.getElementById('modalConfirmarPresupuesto'));
+    }
+    return modalConfirmarPresupuesto;
+}
+
+function mostrarConfirmacionPresupuesto(alerta) {
+    textoConfirmacionPresupuesto.textContent = alerta?.mensaje ||
+        'Este gasto superará el presupuesto mensual de la categoría seleccionada.';
+    obtenerModalConfirmacion().show();
+}
+
+function mostrarNotificacionPresupuesto(alerta) {
+    if (!alerta) return;
+    textoAdvertencia.textContent = `Alerta: se superó el presupuesto de ${alerta.categoria}. ` +
+        `Total usado: S/ ${Number(alerta.nuevo_total).toFixed(2)} de S/ ${Number(alerta.limite).toFixed(2)}.`;
+    mensajeAdvertencia.classList.remove('d-none');
+}
+
 // Validación en cliente
 function validarFormulario() {
     const descripcion = document.getElementById('descripcion').value.trim();
@@ -197,107 +253,124 @@ function validarFormulario() {
     const categoria = document.getElementById('categoria_id').value;
     const monto = parseFloat(document.getElementById('monto').value);
     const fecha = document.getElementById('fecha').value;
-    
-    // Limpiar mensajes previos
-    mensajeError.classList.add('d-none');
-    mensajeExito.classList.add('d-none');
-    
+
+    limpiarMensajes();
+
     // Validar descripción
     if (!descripcion) {
         textoError.textContent = 'La descripción es requerida.';
         mensajeError.classList.remove('d-none');
         return false;
     }
-    
+
     if (descripcion.length > 150) {
         textoError.textContent = 'La descripción no puede exceder 150 caracteres.';
         mensajeError.classList.remove('d-none');
         return false;
     }
-    
+
     // Validar tipo
     if (!tipo) {
         textoError.textContent = 'Debes seleccionar un tipo de transacción.';
         mensajeError.classList.remove('d-none');
         return false;
     }
-    
+
     // Validar categoría
     if (!categoria) {
         textoError.textContent = 'Debes seleccionar una categoría.';
         mensajeError.classList.remove('d-none');
         return false;
     }
-    
+
     // Validar monto
     if (!monto || monto <= 0) {
         textoError.textContent = 'El monto debe ser un número positivo.';
         mensajeError.classList.remove('d-none');
         return false;
     }
-    
+
     if (monto > 999999.99) {
         textoError.textContent = 'El monto excede el límite permitido.';
         mensajeError.classList.remove('d-none');
         return false;
     }
-    
+
     // Validar fecha
     if (!fecha) {
         textoError.textContent = 'La fecha es requerida.';
         mensajeError.classList.remove('d-none');
         return false;
     }
-    
+
     const fechaSeleccionada = new Date(fecha);
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    
+
     if (fechaSeleccionada > hoy) {
         textoError.textContent = 'No se puede ingresar una fecha futura.';
         mensajeError.classList.remove('d-none');
         return false;
     }
-    
+
     return true;
 }
 
-// Manejar envío del formulario
-formTransaccion.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    if (!validarFormulario()) {
-        return;
-    }
-    
+async function enviarTransaccion(confirmarExceso = false) {
     try {
         const formData = new FormData(formTransaccion);
+        if (confirmarExceso) {
+            formData.append('confirmar_exceso', '1');
+        }
+
         const response = await fetch('{{ url_for("transacciones.crear_transaccion") }}', {
             method: 'POST',
             body: formData
         });
-        
+
         const data = await response.json();
-        
+
+        if (response.status === 409 && data.requiere_confirmacion) {
+            mostrarConfirmacionPresupuesto(data.alerta);
+            return;
+        }
+
         if (!response.ok) {
             textoError.textContent = data.error || 'Error al crear la transacción.';
             mensajeError.classList.remove('d-none');
             return;
         }
-        
+
         // Éxito
         textoExito.textContent = data.mensaje || 'Transacción registrada exitosamente.';
         mensajeExito.classList.remove('d-none');
-        
-        // Redirigir después de 1.5 segundos
+        mostrarNotificacionPresupuesto(data.alerta_presupuesto);
+
+        // Redirigir después de mostrar el aviso
         setTimeout(() => {
             window.location.href = '{{ url_for("transacciones.listar_transacciones") }}';
-        }, 1500);
-        
+        }, data.alerta_presupuesto ? 2500 : 1500);
+
     } catch (error) {
         textoError.textContent = 'Error al procesar la solicitud.';
         mensajeError.classList.remove('d-none');
     }
+}
+
+// Manejar envío del formulario
+formTransaccion.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    if (!validarFormulario()) {
+        return;
+    }
+
+    enviarTransaccion(false);
+});
+
+btnConfirmarPresupuesto.addEventListener('click', function() {
+    obtenerModalConfirmacion().hide();
+    enviarTransaccion(true);
 });
 </script>
 
