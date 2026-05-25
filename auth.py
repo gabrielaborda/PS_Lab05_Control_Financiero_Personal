@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
-from models import db, Usuario
+from models import db, Usuario, Categoria
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -33,8 +33,18 @@ def registro():
         nuevo_usuario.set_password(password)
 
         db.session.add(nuevo_usuario)
-        db.session.commit()
+        db.session.flush()
 
+        if not Categoria.query.filter_by(usuario_id=nuevo_usuario.id, nombre="Temporal").first():
+            categoria_temp = Categoria(
+                nombre="Temporal",
+                tipo="ingreso",
+                icono="⏳",
+                usuario_id=nuevo_usuario.id
+            )
+            db.session.add(categoria_temp)
+
+        db.session.commit()
         login_user(nuevo_usuario)
 
         flash("Registro exitoso. Bienvenido al sistema.", "success")

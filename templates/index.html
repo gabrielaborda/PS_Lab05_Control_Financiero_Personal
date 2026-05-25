@@ -21,9 +21,9 @@
                 </p>
 
                 <div class="d-flex flex-wrap gap-2 mt-4">
-                    <button class="btn btn-primary" disabled>
+                    <a href="{{ url_for('transacciones.crear_transaccion') }}" class="btn btn-primary">
                         Registrar movimiento
-                    </button>
+                    </a>
 
                     <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary">
                         Ver dashboard
@@ -76,7 +76,13 @@
                 <p class="text-muted mb-2">
                     Registro y consulta de movimientos financieros personales.
                 </p>
-                <span class="status-badge">Próximamente</span>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('transacciones.listar_transacciones') }}" class="btn btn-primary btn-sm">
+                        Abrir transacciones
+                    </a>
+                {% else %}
+                    <span class="status-badge">Disponible</span>
+                {% endif %}
             </div>
         </div>
 

@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Transacción - Control Financiero{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h3 class="mb-0"><i class="fas fa-edit"></i> Editar Transacción</h3>
+                </div>
+                <div class="card-body">
+                    <form id="formTransaccion" method="POST">
+                        <!-- Descripción -->
+                        <div class="mb-3">
+                            <label for="descripcion" class="form-label">
+                                <i class="fas fa-align-left"></i> Descripción <span class="text-danger">*</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="descripcion" 
+                                name="descripcion"
+                                placeholder="Ej: Salario, Compras en supermercado..."
+                                maxlength="150"
+                                value="{{ transaccion.descripcion }}"
+                                required
+                            >
+                            <small class="form-text text-muted">
+                                Máximo 150 caracteres
+                            </small>
+                            <div class="invalid-feedback">
+                                Por favor ingresa una descripción válida.
+                            </div>
+                        </div>
+
+                        <!-- Tipo -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="tipo" class="form-label">
+                                    <i class="fas fa-exchange-alt"></i> Tipo <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="tipo" name="tipo" required onchange="actualizarCategoriasDisponibles()">
+                                    <option value="">-- Selecciona un tipo --</option>
+                                    <option value="ingreso" {% if transaccion.tipo == 'ingreso' %}selected{% endif %}>✅ Ingreso</option>
+                                    <option value="gasto" {% if transaccion.tipo == 'gasto' %}selected{% endif %}>❌ Gasto</option>
+                                </select>
+                                <div class="invalid-feedback">
+                                    Por favor selecciona un tipo.
+                                </div>
+                            </div>
+
+                            <!-- Categoría -->
+                            <div class="col-md-6">
+                                <label for="categoria_id" class="form-label">
+                                    <i class="fas fa-tag"></i> Categoría <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="categoria_id" name="categoria_id" required>
+                                    <option value="">-- Selecciona una categoría --</option>
+                                    {% for cat in categorias %}
+                                        <option value="{{ cat.id }}" data-tipo="{{ cat.tipo }}"
+                                            {% if transaccion.categoria_id == cat.id %}selected{% endif %}>
+                                            {{ cat.icono }} {{ cat.nombre }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="invalid-feedback">
+                                    Por favor selecciona una categoría.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Monto y Fecha -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="monto" class="form-label">
+                                    <i class="fas fa-dollar-sign"></i> Monto <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input 
+                                        type="number" 
+                                        class="form-control" 
+                                        id="monto" 
+                                        name="monto"
+                                        placeholder="0.00"
+                                        min="0.01"
+                                        step="0.01"
+                                        max="999999.99"
+                                        value="{{ transaccion.monto }}"
+                                        required
+                                    >
+                                </div>
+                                <small class="form-text text-muted">
+                                    Debe ser un número positivo
+                                </small>
+                                <div class="invalid-feedback">
+                                    Por favor ingresa un monto válido.
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="fecha" class="form-label">
+                                    <i class="fas fa-calendar-alt"></i> Fecha <span class="text-danger">*</span>
+                                </label>
+                                <input 
+                                    type="date" 
+                                    class="form-control" 
+                                    id="fecha" 
+                                    name="fecha"
+                                    value="{{ transaccion.fecha.strftime('%Y-%m-%d') }}"
+                                    required
+                                >
+                                <small class="form-text text-muted">
+                                    No puede ser una fecha futura
+                                </small>
+                                <div class="invalid-feedback">
+                                    Por favor selecciona una fecha válida.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información de auditoría -->
+                        <div class="alert alert-info" role="alert">
+                            <small>
+                                <i class="fas fa-info-circle"></i>
+                                Creada: {{ transaccion.fecha_creacion.strftime("%d/%m/%Y %H:%M:%S") }}
+                            </small>
+                        </div>
+
+                        <!-- Mensajes de Error -->
+                        <div id="mensajeError" class="alert alert-danger d-none" role="alert">
+                            <span id="textoError"></span>
+                        </div>
+
+                        <!-- Mensajes de Éxito -->
+                        <div id="mensajeExito" class="alert alert-success d-none" role="alert">
+                            <span id="textoExito"></span>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning flex-grow-1">
+                                <i class="fas fa-save"></i> Guardar Cambios
+                            </button>
+                            <a href="{{ url_for('transacciones.listar_transacciones') }}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Validación de fecha máxima (hoy)
+document.getElementById('fecha').max = new Date().toISOString().split('T')[0];
+
+const formTransaccion = document.getElementById('formTransaccion');
+const mensajeError = document.getElementById('mensajeError');
+const textoError = document.getElementById('textoError');
+const mensajeExito = document.getElementById('mensajeExito');
+const textoExito = document.getElementById('textoExito');
+
+function actualizarCategoriasDisponibles() {
+    const tipoSeleccionado = document.getElementById('tipo').value;
+    const categoriaSelect = document.getElementById('categoria_id');
+    const categoriaActual = {{ transaccion.categoria_id }};
+    
+    // Filtrar opciones
+    const opciones = categoriaSelect.querySelectorAll('option');
+    opciones.forEach(opcion => {
+        if (opcion.value === '') {
+            opcion.style.display = 'block';
+        } else {
+            const tipoOpcion = opcion.dataset.tipo;
+            // Mostrar si coincide con el tipo o si es la categoría actual
+            opcion.style.display = (tipoOpcion === tipoSeleccionado || parseInt(opcion.value) === categoriaActual) ? 'block' : 'none';
+        }
+    });
+}
+
+// Validación en cliente
+function validarFormulario() {
+    const descripcion = document.getElementById('descripcion').value.trim();
+    const tipo = document.getElementById('tipo').value;
+    const categoria = document.getElementById('categoria_id').value;
+    const monto = parseFloat(document.getElementById('monto').value);
+    const fecha = document.getElementById('fecha').value;
+    
+    // Limpiar mensajes previos
+    mensajeError.classList.add('d-none');
+    mensajeExito.classList.add('d-none');
+    
+    // Validar descripción
+    if (!descripcion) {
+        textoError.textContent = 'La descripción es requerida.';
+        mensajeError.classList.remove('d-none');
+        return false;
+    }
+    
+    if (descripcion.length > 150) {
+        textoError.textContent = 'La descripción no puede exceder 150 caracteres.';
+        mensajeError.classList.remove('d-none');
+        return false;
+    }
+    
+    // Validar tipo
+    if (!tipo) {
+        textoError.textContent = 'Debes seleccionar un tipo de transacción.';
+        mensajeError.classList.remove('d-none');
+        return false;
+    }
+    
+    // Validar categoría
+    if (!categoria) {
+        textoError.textContent = 'Debes seleccionar una categoría.';
+        mensajeError.classList.remove('d-none');
+        return false;
+    }
+    
+    // Validar monto
+    if (!monto || monto <= 0) {
+        textoError.textContent = 'El monto debe ser un número positivo.';
+        mensajeError.classList.remove('d-none');
+        return false;
+    }
+    
+    if (monto > 999999.99) {
+        textoError.textContent = 'El monto excede el límite permitido.';
+        mensajeError.classList.remove('d-none');
+        return false;
+    }
+    
+    // Validar fecha
+    if (!fecha) {
+        textoError.textContent = 'La fecha es requerida.';
+        mensajeError.classList.remove('d-none');
+        return false;
+    }
+    
+    const fechaSeleccionada = new Date(fecha);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    
+    if (fechaSeleccionada > hoy) {
+        textoError.textContent = 'No se puede ingresar una fecha futura.';
+        mensajeError.classList.remove('d-none');
+        return false;
+    }
+    
+    return true;
+}
+
+// Manejar envío del formulario
+formTransaccion.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    if (!validarFormulario()) {
+        return;
+    }
+    
+    try {
+        const formData = new FormData(formTransaccion);
+        const response = await fetch('{{ url_for("transacciones.editar_transaccion", id=transaccion.id) }}', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            textoError.textContent = data.error || 'Error al actualizar la transacción.';
+            mensajeError.classList.remove('d-none');
+            return;
+        }
+        
+        // Éxito
+        textoExito.textContent = data.mensaje || 'Transacción actualizada exitosamente.';
+        mensajeExito.classList.remove('d-none');
+        
+        // Redirigir después de 1.5 segundos
+        setTimeout(() => {
+            window.location.href = '{{ url_for("transacciones.listar_transacciones") }}';
+        }, 1500);
+        
+    } catch (error) {
+        textoError.textContent = 'Error al procesar la solicitud.';
+        mensajeError.classList.remove('d-none');
+    }
+});
+</script>
+
+<style>
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border: none;
+    }
+    
+    .form-label {
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+    
+    .input-group-text {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}
