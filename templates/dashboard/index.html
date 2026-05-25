@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Control Financiero Personal{% endblock %}
+
+{% block content %}
+
+<!-- ── Encabezado ── -->
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="mb-0">Dashboard</h2>
+        <p class="text-muted mb-0" style="font-size:.93rem;">Resumen financiero · {{ mes_nombre }}</p>
+    </div>
+    <a href="{{ url_for('dashboard.reportes') }}" class="btn btn-primary btn-sm">
+        Ver reportes completos →
+    </a>
+</div>
+
+<!-- ── Tarjetas de resumen ── -->
+<div class="row g-3 mb-4">
+
+    <!-- Saldo total -->
+    <div class="col-6 col-md-3">
+        <div class="card p-3 h-100">
+            <p class="text-muted mb-1" style="font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;">Saldo total</p>
+            <p class="mb-0 fw-bold fs-4 {% if saldo_total >= 0 %}text-success{% else %}text-danger{% endif %}">
+                S/ {{ "%.2f"|format(saldo_total) }}
+            </p>
+            <p class="text-muted mb-0" style="font-size:.78rem;">Acumulado histórico</p>
+        </div>
+    </div>
+
+    <!-- Saldo del mes -->
+    <div class="col-6 col-md-3">
+        <div class="card p-3 h-100">
+            <p class="text-muted mb-1" style="font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;">Saldo del mes</p>
+            <p class="mb-0 fw-bold fs-4 {% if saldo_mes >= 0 %}text-success{% else %}text-danger{% endif %}">
+                S/ {{ "%.2f"|format(saldo_mes) }}
+            </p>
+            <p class="text-muted mb-0" style="font-size:.78rem;">{{ mes_nombre }}</p>
+        </div>
+    </div>
+
+    <!-- Ingresos del mes -->
+    <div class="col-6 col-md-3">
+        <div class="card p-3 h-100" style="border-left:4px solid var(--color-ingreso);">
+            <p class="text-muted mb-1" style="font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;">Ingresos</p>
+            <p class="mb-0 fw-bold fs-4 text-success">S/ {{ "%.2f"|format(ingresos_mes) }}</p>
+            <p class="text-muted mb-0" style="font-size:.78rem;">Este mes</p>
+        </div>
+    </div>
+
+    <!-- Gastos del mes -->
+    <div class="col-6 col-md-3">
+        <div class="card p-3 h-100" style="border-left:4px solid var(--color-gasto);">
+            <p class="text-muted mb-1" style="font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;">Gastos</p>
+            <p class="mb-0 fw-bold fs-4 text-danger">S/ {{ "%.2f"|format(gastos_mes) }}</p>
+            <p class="text-muted mb-0" style="font-size:.78rem;">Este mes</p>
+        </div>
+    </div>
+</div>
+
+<!-- ── Gráfico rápido + alertas ── -->
+<div class="row g-3 mb-4">
+
+    <!-- Mini gráfico ingresos vs gastos del mes -->
+    <div class="col-md-7">
+        <div class="card p-3 h-100">
+            <h6 class="mb-3">Ingresos vs Gastos — {{ mes_nombre }}</h6>
+            <canvas id="chartMes" height="130"></canvas>
+        </div>
+    </div>
+
+    <!-- Alertas de presupuesto -->
+    <div class="col-md-5">
+        <div class="card p-3 h-100">
+            <h6 class="mb-3">Alertas de presupuesto</h6>
+
+            {% if alertas %}
+                {% for a in alertas %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span style="font-size:.88rem;">
+                            {{ a.icono }} {{ a.categoria }}
+                        </span>
+                        <span class="fw-semibold {% if a.superado %}text-danger{% else %}text-warning{% endif %}" style="font-size:.85rem;">
+                            {{ a.porcentaje }}%
+                        </span>
+                    </div>
+                    <div class="progress" style="height:6px;border-radius:999px;">
+                        <div class="progress-bar {% if a.superado %}bg-danger{% else %}bg-warning{% endif %}"
+                             role="progressbar"
+                             style="width: {{ [a.porcentaje, 100]|min }}%;">
+                        </div>
+                    </div>
+                    <p class="text-muted mb-0" style="font-size:.76rem;">
+                        S/ {{ "%.2f"|format(a.gastado) }} de S/ {{ "%.2f"|format(a.limite) }}
+                        {% if a.superado %}<span class="text-danger fw-semibold"> · ¡Límite superado!</span>{% endif %}
+                    </p>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-3">
+                    <p class="text-muted mb-0" style="font-size:.9rem;">
+                        Sin alertas activas este mes 🎉
+                    </p>
+                    <p class="text-muted" style="font-size:.8rem;">
+                        Los presupuestos los crea el módulo de Categorías.
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- ── Últimas transacciones ── -->
+<div class="card p-3 mb-2">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0">Últimas transacciones</h6>
+        <a href="{{ url_for('dashboard.reportes') }}" class="text-muted" style="font-size:.85rem;">Ver reportes →</a>
+    </div>
+
+    {% if ultimas %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr class="table-dark">
+                    <th>Fecha</th>
+                    <th>Descripción</th>
+                    <th>Categoría</th>
+                    <th class="text-end">Monto</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in ultimas %}
+                <tr>
+                    <td style="font-size:.88rem;white-space:nowrap;">
+                        {{ t.fecha.strftime("%d/%m/%Y") }}
+                    </td>
+                    <td style="font-size:.9rem;">{{ t.descripcion }}</td>
+                    <td style="font-size:.85rem;">
+                        {% if t.categoria %}
+                            {{ t.categoria.icono }} {{ t.categoria.nombre }}
+                        {% else %}
+                            <span class="text-muted">Sin categoría</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end fw-semibold {% if t.tipo == 'ingreso' %}text-success{% else %}text-danger{% endif %}" style="white-space:nowrap;">
+                        {% if t.tipo == 'ingreso' %}+{% else %}−{% endif %}
+                        S/ {{ "%.2f"|format(t.monto) }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-4">
+        <p class="text-muted mb-0">Aún no hay transacciones registradas.</p>
+        <p class="text-muted" style="font-size:.85rem;">Las registra el módulo de Ingresos y Gastos.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(async () => {
+    const res  = await fetch("{{ url_for('dashboard.api_resumen') }}");
+    const data = await res.json();
+
+    // ── Gráfico barras ingresos vs gastos del mes ──
+    new Chart(document.getElementById("chartMes"), {
+        type: "bar",
+        data: {
+            labels: ["Ingresos", "Gastos"],
+            datasets: [{
+                data: [data.ingresos, data.gastos],
+                backgroundColor: [
+                    "rgba(46, 125, 50, 0.75)",
+                    "rgba(198, 40, 40, 0.75)"
+                ],
+                borderColor: [
+                    "rgba(46, 125, 50, 1)",
+                    "rgba(198, 40, 40, 1)"
+                ],
+                borderWidth: 1.5,
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` S/ ${ctx.parsed.y.toFixed(2)}`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: v => `S/ ${v.toFixed(0)}`
+                    },
+                    grid: { color: "rgba(221,227,237,0.6)" }
+                },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}
