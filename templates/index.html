@@ -93,7 +93,13 @@
                 <p class="text-muted mb-2">
                     Organización de ingresos y gastos según su tipo.
                 </p>
-                <span class="status-badge">Próximamente</span>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('categorias.lista') }}" class="btn btn-primary btn-sm">
+                        Abrir categorías
+                    </a>
+                {% else %}
+                    <span class="status-badge">Disponible</span>
+                {% endif %}
             </div>
         </div>
 
@@ -104,7 +110,13 @@
                 <p class="text-muted mb-2">
                     Definición de límites mensuales y alertas de gasto.
                 </p>
-                <span class="status-badge">Próximamente</span>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('categorias.alertas') }}" class="btn btn-primary btn-sm">
+                        Ver presupuestos
+                    </a>
+                {% else %}
+                    <span class="status-badge">Disponible</span>
+                {% endif %}
             </div>
         </div>
 

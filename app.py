@@ -1,9 +1,10 @@
 from flask import Flask, render_template
 from flask_login import LoginManager
-from models import db, Usuario
+from models import db, Usuario, Categoria, Transaccion, Presupuesto
 from auth import auth_bp
 from dashboard import dashboard_bp
 from transacciones import transacciones_bp
+from categorias import cat_bp
 
 
 def create_app():
@@ -28,6 +29,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(transacciones_bp)
+    app.register_blueprint(cat_bp)
 
     @app.route("/")
     def home():
@@ -47,6 +49,9 @@ def create_app():
     @app.errorhandler(500)
     def error_interno(error):
         return render_template("error/500.html"), 500
+
+    with app.app_context():
+        db.create_all()
 
     return app
 
