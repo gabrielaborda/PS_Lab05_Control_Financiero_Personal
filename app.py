@@ -2,7 +2,9 @@ from flask import Flask, render_template
 from flask_login import LoginManager
 from models import db, Usuario
 from auth import auth_bp
-from dashboard import dashboard_bp  
+from dashboard import dashboard_bp
+from transacciones import transacciones_bp
+
 
 def create_app():
     app = Flask(__name__)
@@ -24,7 +26,8 @@ def create_app():
         return Usuario.query.get(int(user_id))
 
     app.register_blueprint(auth_bp)
-    app.register_blueprint(dashboard_bp) 
+    app.register_blueprint(dashboard_bp)
+    app.register_blueprint(transacciones_bp)
 
     @app.route("/")
     def home():
@@ -44,12 +47,6 @@ def create_app():
     @app.errorhandler(500)
     def error_interno(error):
         return render_template("error/500.html"), 500
-
-    with app.app_context():
-        db.create_all()
-        
-    with app.app_context():
-        db.create_all()
 
     return app
 

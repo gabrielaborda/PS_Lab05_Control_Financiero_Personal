@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Transacciones - Control Financiero{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Encabezado -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h1 class="display-4">📊 Mis Transacciones</h1>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="{{ url_for('transacciones.crear_transaccion') }}" class="btn btn-success btn-lg">
+                <i class="fas fa-plus"></i> Nueva Transacción
+            </a>
+            <button class="btn btn-info btn-lg" data-bs-toggle="collapse" data-bs-target="#filtros">
+                <i class="fas fa-filter"></i> Filtros
+            </button>
+            <a href="{{ url_for('transacciones.exportar_csv', tipo=tipo_filtro, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, categoria_id=categoria_id) }}" 
+               class="btn btn-warning btn-lg">
+                <i class="fas fa-download"></i> Exportar CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Resumen de Ingresos, Gastos y Balance -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-success">
+                <div class="card-body">
+                    <h5 class="card-title text-success">💰 Total Ingresos</h5>
+                    <p class="card-text display-6 text-success">
+                        {{ "%.2f"|format(total_ingresos) }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-danger">
+                <div class="card-body">
+                    <h5 class="card-title text-danger">💸 Total Gastos</h5>
+                    <p class="card-text display-6 text-danger">
+                        -{{ "%.2f"|format(total_gastos) }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card {% if balance >= 0 %}border-success{% else %}border-danger{% endif %}">
+                <div class="card-body">
+                    <h5 class="card-title">⚖️ Balance</h5>
+                    <p class="card-text display-6 {% if balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {{ "%.2f"|format(balance) }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de Filtros -->
+    <div class="collapse mb-4" id="filtros">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="tipo" class="form-label">Tipo</label>
+                        <select class="form-select" id="tipo" name="tipo">
+                            <option value="">-- Todos --</option>
+                            <option value="ingreso" {% if tipo_filtro == 'ingreso' %}selected{% endif %}>Ingreso</option>
+                            <option value="gasto" {% if tipo_filtro == 'gasto' %}selected{% endif %}>Gasto</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="categoria_id" class="form-label">Categoría</label>
+                        <select class="form-select" id="categoria_id" name="categoria_id">
+                            <option value="">-- Todas --</option>
+                            {% for cat in categorias %}
+                                <option value="{{ cat.id }}" {% if categoria_id == cat.id|string %}selected{% endif %}>
+                                    {{ cat.icono }} {{ cat.nombre }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="fecha_inicio" class="form-label">Desde</label>
+                        <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" 
+                               value="{{ fecha_inicio }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="fecha_fin" class="form-label">Hasta</label>
+                        <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" 
+                               value="{{ fecha_fin }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Transacciones -->
+    <div class="card">
+        <div class="card-body">
+            {% if transacciones.items %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Descripción</th>
+                                <th>Categoría</th>
+                                <th>Tipo</th>
+                                <th class="text-end">Monto</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaccion in transacciones.items %}
+                                <tr>
+                                    <td>{{ transaccion.fecha.strftime("%d/%m/%Y") }}</td>
+                                    <td>{{ transaccion.descripcion }}</td>
+                                    <td>
+                                        {% if transaccion.categoria %}
+                                            {{ transaccion.categoria.icono }} {{ transaccion.categoria.nombre }}
+                                        {% else %}
+                                            <span class="badge bg-secondary">Sin categoría</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if transaccion.tipo == 'ingreso' %}
+                                            <span class="badge bg-success">Ingreso</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Gasto</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="{% if transaccion.tipo == 'ingreso' %}text-success fw-bold{% else %}text-danger fw-bold{% endif %}">
+                                            {% if transaccion.tipo == 'ingreso' %}+{% else %}-{% endif %}
+                                            {{ "%.2f"|format(transaccion.monto) }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{{ url_for('transacciones.editar_transaccion', id=transaccion.id) }}" 
+                                           class="btn btn-sm btn-warning">
+                                            <i class="fas fa-edit"></i> Editar
+                                        </a>
+                                        <button class="btn btn-sm btn-danger" 
+                                                onclick="eliminarTransaccion({{ transaccion.id }})">
+                                            <i class="fas fa-trash"></i> Eliminar
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginación -->
+                {% if transacciones.pages > 1 %}
+                    <nav aria-label="Page navigation" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if transacciones.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('transacciones.listar_transacciones', 
+                                        pagina=transacciones.prev_num, tipo=tipo_filtro, 
+                                        fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, 
+                                        categoria_id=categoria_id) }}">
+                                        Anterior
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for page_num in transacciones.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num == transacciones.page %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ page_num }}</span>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('transacciones.listar_transacciones', 
+                                                pagina=page_num, tipo=tipo_filtro, 
+                                                fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, 
+                                                categoria_id=categoria_id) }}">
+                                                {{ page_num }}
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if transacciones.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('transacciones.listar_transacciones', 
+                                        pagina=transacciones.next_num, tipo=tipo_filtro, 
+                                        fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, 
+                                        categoria_id=categoria_id) }}">
+                                        Siguiente
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-info text-center" role="alert">
+                    <h4 class="alert-heading">📭 Sin transacciones</h4>
+                    <p>No hay transacciones que coincidan con los filtros seleccionados.</p>
+                    <a href="{{ url_for('transacciones.crear_transaccion') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Crear primera transacción
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function eliminarTransaccion(id) {
+    if (confirm('¿Estás seguro de que deseas eliminar esta transacción?')) {
+        fetch(`/transacciones/${id}/eliminar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Error al eliminar');
+        })
+        .then(data => {
+            alert(data.mensaje || 'Transacción eliminada exitosamente');
+            location.reload();
+        })
+        .catch(error => {
+            alert('Error: ' + error.message);
+        });
+    }
+}
+</script>
+
+<style>
+    .table-hover tbody tr:hover {
+        background-color: #f5f5f5;
+    }
+    
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .display-6 {
+        font-size: 2rem;
+    }
+</style>
+{% endblock %}
