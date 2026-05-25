@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block title %}Reportes | Control Financiero Personal{% endblock %}
+
+{% block content %}
+
+<!-- ── Encabezado ── -->
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="mb-0">Reportes</h2>
+        <p class="text-muted mb-0" style="font-size:.93rem;">Análisis visual de tus finanzas personales</p>
+    </div>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary btn-sm">
+        ← Volver al dashboard
+    </a>
+</div>
+
+<!-- ── Fila 1: barras mensuales + dona por categoría ── -->
+<div class="row g-3 mb-3">
+
+    <!-- Gráfico 1: Evolución últimos 6 meses -->
+    <div class="col-md-7">
+        <div class="card p-3 h-100">
+            <h6 class="mb-1">Evolución mensual (últimos 6 meses)</h6>
+            <p class="text-muted mb-3" style="font-size:.82rem;">Ingresos y gastos mes a mes</p>
+            <canvas id="chartMensual" height="210"></canvas>
+        </div>
+    </div>
+
+    <!-- Gráfico 2: Dona gastos por categoría -->
+    <div class="col-md-5">
+        <div class="card p-3 h-100">
+            <h6 class="mb-1">Gastos por categoría</h6>
+            <p class="text-muted mb-3" style="font-size:.82rem;">Mes actual</p>
+            <div style="max-width:260px;margin:0 auto;">
+                <canvas id="chartDona"></canvas>
+            </div>
+            <div id="legendDona" class="mt-3" style="font-size:.82rem;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Fila 2: barras horizontales de presupuestos ── -->
+<div class="card p-3 mb-2">
+    <h6 class="mb-1">Estado de presupuestos</h6>
+    <p class="text-muted mb-3" style="font-size:.82rem;">Avance de gasto vs límite definido para este mes</p>
+
+    <div id="sinPresupuestos" class="text-center py-4 d-none">
+        <p class="text-muted mb-0">No hay presupuestos definidos para este mes.</p>
+        <p class="text-muted" style="font-size:.85rem;">Los configura el módulo de Categorías.</p>
+    </div>
+
+    <canvas id="chartPresupuestos" height="100"></canvas>
+</div>
+
+<!-- ── Resumen numérico ── -->
+<div class="card p-3">
+    <h6 class="mb-3">Resumen del mes actual</h6>
+    <div class="row g-3" id="resumenNumerico">
+        <!-- Llenado por JS -->
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// ── Paleta de colores para la dona ──
+const PALETTE = [
+    "#2563A8","#2E7D32","#F57F17","#C62828",
+    "#6B7A99","#0077b6","#e9c46a","#264653",
+    "#e76f51","#2a9d8f","#a8dadc","#457b9d"
+];
+
+// ── Helpers ──
+const fmt = v => `S/ ${parseFloat(v).toFixed(2)}`;
+
+(async () => {
+    const [resMensual, resResumen, resPres] = await Promise.all([
+        fetch("{{ url_for('dashboard.api_mensual') }}").then(r => r.json()),
+        fetch("{{ url_for('dashboard.api_resumen') }}").then(r => r.json()),
+        fetch("{{ url_for('dashboard.api_presupuestos') }}").then(r => r.json()),
+    ]);
+
+    // ── Gráfico 1: Evolución mensual (barras agrupadas) ──
+    new Chart(document.getElementById("chartMensual"), {
+        type: "bar",
+        data: {
+            labels: resMensual.map(d => d.mes),
+            datasets: [
+                {
+                    label: "Ingresos",
+                    data: resMensual.map(d => d.ingresos),
+                    backgroundColor: "rgba(46, 125, 50, 0.70)",
+                    borderColor: "rgba(46, 125, 50, 1)",
+                    borderWidth: 1.5,
+                    borderRadius: 5,
+                },
+                {
+                    label: "Gastos",
+                    data: resMensual.map(d => d.gastos),
+                    backgroundColor: "rgba(198, 40, 40, 0.70)",
+                    borderColor: "rgba(198, 40, 40, 1)",
+                    borderWidth: 1.5,
+                    borderRadius: 5,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: "top" },
+                tooltip: {
+                    callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.y)}` }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: v => `S/ ${v}` },
+                    grid: { color: "rgba(221,227,237,0.6)" }
+                },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // ── Gráfico 2: Dona por categoría ──
+    const cats = resResumen.por_categoria;
+    if (cats.length > 0) {
+        new Chart(document.getElementById("chartDona"), {
+            type: "doughnut",
+            data: {
+                labels: cats.map(c => `${c.icono} ${c.nombre}`),
+                datasets: [{
+                    data: cats.map(c => c.total),
+                    backgroundColor: PALETTE.slice(0, cats.length),
+                    borderWidth: 2,
+                    borderColor: "#fff",
+                    hoverOffset: 8,
+                }]
+            },
+            options: {
+                responsive: true,
+                cutout: "62%",
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed)}`
+                        }
+                    }
+                }
+            }
+        });
+
+        // Leyenda personalizada
+        const total = cats.reduce((s, c) => s + c.total, 0);
+        const leyenda = document.getElementById("legendDona");
+        leyenda.innerHTML = cats.map((c, i) => `
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span>
+                    <span style="display:inline-block;width:10px;height:10px;
+                                 background:${PALETTE[i]};border-radius:2px;
+                                 margin-right:5px;"></span>
+                    ${c.icono} ${c.nombre}
+                </span>
+                <span class="fw-semibold">${fmt(c.total)}</span>
+            </div>
+        `).join("");
+    } else {
+        document.getElementById("chartDona").closest(".card").innerHTML += `
+            <p class="text-muted text-center mt-3" style="font-size:.88rem;">
+                Sin gastos categorizados este mes.
+            </p>`;
+    }
+
+    // ── Gráfico 3: Barras horizontales de presupuestos ──
+    if (resPres.length === 0) {
+        document.getElementById("sinPresupuestos").classList.remove("d-none");
+        document.getElementById("chartPresupuestos").style.display = "none";
+    } else {
+        new Chart(document.getElementById("chartPresupuestos"), {
+            type: "bar",
+            data: {
+                labels: resPres.map(p => `${p.icono} ${p.categoria}`),
+                datasets: [
+                    {
+                        label: "Gastado",
+                        data: resPres.map(p => p.gastado),
+                        backgroundColor: resPres.map(p =>
+                            p.porcentaje >= 100
+                                ? "rgba(198,40,40,0.75)"
+                                : p.porcentaje >= 80
+                                    ? "rgba(245,127,23,0.75)"
+                                    : "rgba(37,99,168,0.75)"
+                        ),
+                        borderRadius: 4,
+                        borderWidth: 0,
+                    },
+                    {
+                        label: "Límite",
+                        data: resPres.map(p => p.limite),
+                        backgroundColor: "rgba(221,227,237,0.5)",
+                        borderRadius: 4,
+                        borderWidth: 0,
+                    }
+                ]
+            },
+            options: {
+                indexAxis: "y",
+                responsive: true,
+                plugins: {
+                    legend: { position: "top" },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.parsed.x)}`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        ticks: { callback: v => `S/ ${v}` },
+                        grid: { color: "rgba(221,227,237,0.6)" }
+                    },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // ── Resumen numérico ──
+    const saldoColor = resResumen.saldo >= 0 ? "var(--color-ingreso)" : "var(--color-gasto)";
+    document.getElementById("resumenNumerico").innerHTML = `
+        <div class="col-6 col-md-4">
+            <div class="card p-3 text-center" style="border-top:3px solid var(--color-ingreso);">
+                <p class="text-muted mb-1" style="font-size:.78rem;text-transform:uppercase;">Ingresos del mes</p>
+                <p class="fw-bold fs-5 text-success mb-0">${fmt(resResumen.ingresos)}</p>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="card p-3 text-center" style="border-top:3px solid var(--color-gasto);">
+                <p class="text-muted mb-1" style="font-size:.78rem;text-transform:uppercase;">Gastos del mes</p>
+                <p class="fw-bold fs-5 text-danger mb-0">${fmt(resResumen.gastos)}</p>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="card p-3 text-center" style="border-top:3px solid ${saldoColor};">
+                <p class="text-muted mb-1" style="font-size:.78rem;text-transform:uppercase;">Balance del mes</p>
+                <p class="fw-bold fs-5 mb-0" style="color:${saldoColor};">${fmt(resResumen.saldo)}</p>
+            </div>
+        </div>
+    `;
+})();
+</script>
+{% endblock %}
