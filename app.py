@@ -2,7 +2,7 @@ from flask import Flask, render_template
 from flask_login import LoginManager
 from models import db, Usuario
 from auth import auth_bp
-
+from dashboard import dashboard_bp  
 
 def create_app():
     app = Flask(__name__)
@@ -24,6 +24,7 @@ def create_app():
         return Usuario.query.get(int(user_id))
 
     app.register_blueprint(auth_bp)
+    app.register_blueprint(dashboard_bp) 
 
     @app.route("/")
     def home():
