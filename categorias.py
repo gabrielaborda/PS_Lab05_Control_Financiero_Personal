@@ -31,9 +31,17 @@ def lista():
 @login_required
 def nueva():
     if request.method == 'POST':
-        nombre = request.form.get('nombre')
+        nombre = request.form.get('nombre', '').strip()
         tipo = request.form.get('tipo')
-        icono = request.form.get('icono')
+        icono = request.form.get('icono', '').strip()
+        
+        if not nombre:
+            flash('El nombre de la categoría es obligatorio.', 'danger')
+            return redirect(url_for('categorias.nueva', tipo=tipo))
+            
+        if len(nombre) > 50:
+            flash('El nombre de la categoría no puede superar los 50 caracteres.', 'danger')
+            return redirect(url_for('categorias.nueva', tipo=tipo))
         
         nueva_cat = Categoria(
             nombre=nombre, 
@@ -55,9 +63,21 @@ def editar(id):
     categoria = Categoria.query.filter_by(id=id, usuario_id=current_user.id).first_or_404()
         
     if request.method == 'POST':
-        categoria.nombre = request.form.get('nombre')
-        categoria.tipo = request.form.get('tipo')
-        categoria.icono = request.form.get('icono')
+        nombre = request.form.get('nombre', '').strip()
+        tipo = request.form.get('tipo')
+        icono = request.form.get('icono', '').strip()
+        
+        if not nombre:
+            flash('El nombre de la categoría es obligatorio.', 'danger')
+            return redirect(url_for('categorias.editar', id=id))
+            
+        if len(nombre) > 50:
+            flash('El nombre de la categoría no puede superar los 50 caracteres.', 'danger')
+            return redirect(url_for('categorias.editar', id=id))
+            
+        categoria.nombre = nombre
+        categoria.tipo = tipo
+        categoria.icono = icono
         
         db.session.commit()
         
@@ -80,6 +100,10 @@ def eliminar(id):
 def presupuesto(id):
     categoria = Categoria.query.filter_by(id=id, usuario_id=current_user.id).first_or_404()
     
+    if categoria.tipo != 'gasto':
+        flash('Únicamente se puede asignar presupuesto a categorías de tipo gasto.', 'danger')
+        return redirect(url_for('categorias.lista'))
+    
     hoy = date.today()
     mes_actual = hoy.month
     anio_actual = hoy.year
@@ -97,6 +121,10 @@ def presupuesto(id):
         monto = request.form.get('monto')
         mes = request.form.get('mes', mes_actual, type=int)
         anio = request.form.get('anio', anio_actual, type=int)
+        
+        if mes != mes_actual or anio != anio_actual:
+            flash('El mes y año ingresados deben corresponder al periodo actual.', 'danger')
+            return redirect(url_for('categorias.presupuesto', id=categoria.id))
         
         if monto:
             p = Presupuesto.query.filter_by(
