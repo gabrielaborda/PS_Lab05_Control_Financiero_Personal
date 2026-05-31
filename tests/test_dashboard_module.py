@@ -38,7 +38,50 @@ def test_dashboard_api_resumen_refleja_ingresos_y_gastos(client, usuario_con_dat
     assert data["gastos"] == 70.00
     assert data["saldo"] == 130.00
 
+#
+def test_dashboard_api_resumen_con_solo_gastos(client, usuario_con_datos):
+    client.post(
+        "/transacciones/crear",
+        data=payload_transaccion(
+            usuario_con_datos,
+            monto="50.00",
+            tipo="gasto",
+            categoria_id=str(usuario_con_datos["categoria_gasto_id"]),
+        ),
+    )
 
+    respuesta = client.get("/dashboard/api/resumen")
+
+    assert respuesta.status_code == 200
+
+    data = respuesta.get_json()
+
+    assert data["gastos"] == 50.00
+    assert data["ingresos"] == 0.00
+    assert data["saldo"] == -50.00
+
+def test_dashboard_api_resumen_con_solo_ingresos(client, usuario_con_datos):
+    client.post(
+        "/transacciones/crear",
+        data=payload_transaccion(
+            usuario_con_datos,
+            monto="100.00",
+            tipo="ingreso",
+            categoria_id=str(usuario_con_datos["categoria_ingreso_id"]),
+        ),
+    )
+
+    respuesta = client.get("/dashboard/api/resumen")
+
+    assert respuesta.status_code == 200
+
+    data = respuesta.get_json()
+
+    assert data["ingresos"] == 100.00
+    assert data["gastos"] == 0.00
+    assert data["saldo"] == 100.00
+    
+    
 def test_dashboard_api_presupuestos_muestra_porcentaje_de_uso(client, usuario_con_datos):
     client.post(
         "/transacciones/crear",
@@ -88,3 +131,13 @@ def test_dashboard_api_mensual_devuelve_seis_meses(client, usuario_con_datos):
         assert "mes" in item
         assert "ingresos" in item
         assert "gastos" in item
+        
+def test_dashboard_reportes_carga_correctamente(
+    client,
+    usuario_con_datos,
+):
+    respuesta = client.get(
+        "/dashboard/reportes"
+    )
+
+    assert respuesta.status_code == 200
