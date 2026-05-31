@@ -1,6 +1,6 @@
-# Aplicación de Control Financiero Personal
+# Control Financiero Personal
 
-Sistema web que permite a usuarios registrarse, iniciar sesión y gestionar sus finanzas personales: registrar ingresos y gastos, organizarlos por categorías, definir presupuestos mensuales con alertas, y visualizar un dashboard con gráficos de resumen.
+Aplicación web para gestionar finanzas personales con registro de ingresos y gastos, categorías personalizadas, presupuestos mensuales y un dashboard de análisis.
 
 ## Integrantes
 - Betanzos Rosas Taylor Anthony
