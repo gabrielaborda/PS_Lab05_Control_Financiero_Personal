@@ -1,6 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
 from models import db, Usuario, Categoria
+import re
+
+# stricter email regex; requires local part, @, domain with at least one dot and a TLD of 2+ letters
+EMAIL_REGEX = r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
@@ -18,7 +22,13 @@ def registro():
         if not nombre or not email or not password or not confirmar_password:
             flash("Todos los campos son obligatorios.", "danger")
             return redirect(url_for("auth.registro"))
-
+        # use fullmatch to ensure the entire string complies with the pattern
+        if not re.fullmatch(EMAIL_REGEX, email):
+            flash("Ingrese un correo electrónico válido.", "danger")
+            return redirect(url_for("auth.registro"))
+        if len(password) < 6:
+            flash("La contraseña debe tener al menos 6 caracteres.", "danger")
+            return redirect(url_for("auth.registro"))
         if password != confirmar_password:
             flash("Las contraseñas no coinciden.", "danger")
             return redirect(url_for("auth.registro"))
