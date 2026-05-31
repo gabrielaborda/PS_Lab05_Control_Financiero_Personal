@@ -556,3 +556,87 @@ def test_eliminar_transaccion_de_otro_usuario_no_debe_permitirse(client, app, us
         transaccion = db.session.get(Transaccion, transaccion_ajena_id)
 
     assert transaccion is not None
+
+
+# =========================================================
+# Caja negra - Validaciones de Categorías y Presupuestos (RF-20, RF-21, RF-24, RF-25)
+# =========================================================
+
+def test_crear_categoria_rechaza_nombre_vacio(client, usuario_con_datos):
+    respuesta = client.post(
+        "/categorias/nueva",
+        data={
+            "nombre": "   ",
+            "tipo": "gasto",
+            "icono": "🍔"
+        },
+        follow_redirects=True
+    )
+    assert "El nombre de la categoría es obligatorio" in respuesta.get_data(as_text=True)
+
+def test_crear_categoria_rechaza_nombre_largo(client, usuario_con_datos):
+    respuesta = client.post(
+        "/categorias/nueva",
+        data={
+            "nombre": "a" * 51,
+            "tipo": "gasto",
+            "icono": "🍔"
+        },
+        follow_redirects=True
+    )
+    assert "El nombre de la categoría no puede superar los 50 caracteres" in respuesta.get_data(as_text=True)
+
+def test_editar_categoria_rechaza_nombre_vacio(client, usuario_con_datos):
+    cat_id = usuario_con_datos["categoria_gasto_id"]
+    respuesta = client.post(
+        f"/categorias/editar/{cat_id}",
+        data={
+            "nombre": "",
+            "tipo": "gasto",
+            "icono": "🍔"
+        },
+        follow_redirects=True
+    )
+    assert "El nombre de la categoría es obligatorio" in respuesta.get_data(as_text=True)
+
+def test_editar_categoria_rechaza_nombre_largo(client, usuario_con_datos):
+    cat_id = usuario_con_datos["categoria_gasto_id"]
+    respuesta = client.post(
+        f"/categorias/editar/{cat_id}",
+        data={
+            "nombre": "x" * 51,
+            "tipo": "gasto",
+            "icono": "🍔"
+        },
+        follow_redirects=True
+    )
+    assert "El nombre de la categoría no puede superar los 50 caracteres" in respuesta.get_data(as_text=True)
+
+def test_presupuesto_rechaza_categoria_ingreso(client, usuario_con_datos):
+    cat_id = usuario_con_datos["categoria_ingreso_id"]
+    respuesta = client.post(
+        f"/categorias/presupuesto/{cat_id}",
+        data={
+            "monto": "150.00",
+            "mes": usuario_con_datos["hoy"].split("-")[1],
+            "anio": usuario_con_datos["hoy"].split("-")[0]
+        },
+        follow_redirects=True
+    )
+    assert "Únicamente se puede asignar presupuesto a categorías de tipo gasto" in respuesta.get_data(as_text=True)
+
+def test_presupuesto_rechaza_periodo_diferente(client, usuario_con_datos):
+    cat_id = usuario_con_datos["categoria_gasto_id"]
+    mes_actual = int(usuario_con_datos["hoy"].split("-")[1])
+    mes_invalido = 12 if mes_actual != 12 else 11
+    
+    respuesta = client.post(
+        f"/categorias/presupuesto/{cat_id}",
+        data={
+            "monto": "150.00",
+            "mes": str(mes_invalido),
+            "anio": usuario_con_datos["hoy"].split("-")[0]
+        },
+        follow_redirects=True
+    )
+    assert "El mes y año ingresados deben corresponder al periodo actual" in respuesta.get_data(as_text=True)
