@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template
 from flask_login import LoginManager
 from models import db, Usuario, Categoria, Transaccion, Presupuesto
@@ -10,7 +11,7 @@ from categorias import cat_bp
 def create_app():
     app = Flask(__name__)
 
-    app.config["SECRET_KEY"] = "clave-secreta-desarrollo"
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "clave-local-desarrollo")
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///finanzas.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
